@@ -10,7 +10,7 @@ directory = "./public"
 [[d1_databases]]
 binding = "DB"
 database_name = "tt-training-db"
-database_id = "REPLACE_AFTER_DB_CREATION"
+database_id = "d9667a8f-f7b8-445e-8238-f5c4ec48d85f"
 
 # Environment variables (nicht-geheime Werte)
 [vars]
