@@ -79,3 +79,11 @@ CREATE INDEX IF NOT EXISTS idx_assessments_player ON assessments(player_id);
 CREATE INDEX IF NOT EXISTS idx_assessments_verein ON assessments(verein_id);
 CREATE INDEX IF NOT EXISTS idx_trainers_verein ON trainers(verein_id);
 CREATE INDEX IF NOT EXISTS idx_lists_verein ON lists(verein_id, list_key);
+
+CREATE TABLE IF NOT EXISTS settings (
+  verein_id TEXT NOT NULL,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  PRIMARY KEY (verein_id, key),
+  FOREIGN KEY (verein_id) REFERENCES vereine(id) ON DELETE CASCADE
+);
