@@ -81,6 +81,18 @@ function requireRole(user, ...roles) {
   return null;
 }
 
+async function getSetting(env, vereinId, key, defaultValue) {
+  const row = await env.DB.prepare('SELECT value FROM settings WHERE verein_id=? AND key=?').bind(vereinId, key).first();
+  return row ? row.value : defaultValue;
+}
+
+async function getInitialPasswords(env, vereinId) {
+  return {
+    spieler: await getSetting(env, vereinId, 'pw_spieler', 'TVB1912'),
+    trainer: await getSetting(env, vereinId, 'pw_trainer', 'TVB1912admin'),
+  };
+}
+
 // ============================================================
 // SEED
 // ============================================================
@@ -154,6 +166,10 @@ export async function onRequest(context) {
     if (path === 'lists' && method === 'GET') return getLists(env, user);
     if (path === 'lists' && method === 'POST') return addListItem(request, env, user);
     if (path === 'lists' && method === 'DELETE') return removeListItem(request, env, user);
+
+    // --- SETTINGS ---
+    if (path === 'settings' && method === 'GET') return getSettings(env, user);
+    if (path === 'settings' && method === 'POST') return saveSettings(request, env, user);
 
     // --- USERS ---
     if (path === 'users' && method === 'GET') return getUsers(env, user);
@@ -237,7 +253,8 @@ async function savePlayer(request, env, user) {
     JSON.stringify(data.mannschaft||[]), data.gruppe||'', data.hand||'', data.trainer||'',
     data.vhName||'', data.vhTyp||'', data.rhName||'', data.rhTyp||'').run();
   const uname = await genUsername(env, user.verein_id, data.vorname, data.name);
-  const hash = await hashPassword('TVB1912');
+  const pws = await getInitialPasswords(env, user.verein_id);
+  const hash = await hashPassword(pws.spieler);
   await env.DB.prepare(
     'INSERT INTO users (id,verein_id,username,password_hash,role,display_name,player_id,must_change_password) VALUES (?,?,?,?,?,?,?,1)'
   ).bind(uid(), user.verein_id, uname, hash, 'spieler', `${data.vorname} ${data.name}`, id).run();
@@ -328,7 +345,8 @@ async function saveTrainer(request, env, user) {
   await env.DB.prepare('INSERT INTO trainers (id,verein_id,name,vorname,role) VALUES (?,?,?,?,?)')
     .bind(tid, user.verein_id, data.name, data.vorname, data.role||'trainer').run();
   const uname = await genUsername(env, user.verein_id, data.vorname, data.name);
-  const hash = await hashPassword('TVB1912admin');
+  const pws = await getInitialPasswords(env, user.verein_id);
+  const hash = await hashPassword(pws.trainer);
   await env.DB.prepare(
     'INSERT INTO users (id,verein_id,username,password_hash,role,display_name,trainer_id,must_change_password) VALUES (?,?,?,?,?,?,?,1)'
   ).bind(uid(), user.verein_id, uname, hash, data.role||'trainer', `${data.vorname} ${data.name}`, tid).run();
@@ -358,9 +376,10 @@ async function deleteTrainer(env, user, tId) {
 async function getLists(env, user) {
   const rows = await env.DB.prepare('SELECT list_key,value FROM lists WHERE verein_id=? ORDER BY value').bind(user.verein_id).all();
   const result = { mannschaften:[], trainingsgruppen:[], trainerNamen:[] };
-  rows.results.forEach(r => { if (result[r.list_key]) result[r.list_key].push(r.value); });
+  rows.results.forEach(r => { if (result[r.list_key] && r.list_key !== 'trainerNamen') result[r.list_key].push(r.value); });
+  // Trainer-Namen kommen ausschließlich aus der Trainertabelle
   const trainers = await env.DB.prepare('SELECT vorname,name FROM trainers WHERE verein_id=?').bind(user.verein_id).all();
-  trainers.results.forEach(t => { const fn=`${t.vorname} ${t.name}`; if(!result.trainerNamen.includes(fn))result.trainerNamen.push(fn); });
+  trainers.results.forEach(t => { result.trainerNamen.push(`${t.vorname} ${t.name}`); });
   result.trainerNamen.sort((a,b) => a.localeCompare(b));
   return json(result);
 }
@@ -396,9 +415,33 @@ async function resetPassword(env, user, targetId) {
   const check = requireRole(user, 'admin'); if (check) return check;
   const target = await env.DB.prepare('SELECT * FROM users WHERE id=? AND verein_id=?').bind(targetId, user.verein_id).first();
   if (!target) return err('Benutzer nicht gefunden.');
-  const pw = target.role === 'spieler' ? 'TVB1912' : 'TVB1912admin';
+  const pws = await getInitialPasswords(env, user.verein_id);
+  const pw = target.role === 'spieler' ? pws.spieler : pws.trainer;
   const hash = await hashPassword(pw);
   await env.DB.prepare('UPDATE users SET password_hash=?,must_change_password=1 WHERE id=?').bind(hash, targetId).run();
+  return json({ ok: true });
+}
+
+// ============================================================
+// SETTINGS
+// ============================================================
+async function getSettings(env, user) {
+  const check = requireRole(user, 'admin'); if (check) return check;
+  const pws = await getInitialPasswords(env, user.verein_id);
+  return json({ pw_spieler: pws.spieler, pw_trainer: pws.trainer });
+}
+
+async function saveSettings(request, env, user) {
+  const check = requireRole(user, 'admin'); if (check) return check;
+  const data = await request.json();
+  if (data.pw_spieler) {
+    await env.DB.prepare('INSERT INTO settings (verein_id,key,value) VALUES (?,?,?) ON CONFLICT(verein_id,key) DO UPDATE SET value=excluded.value')
+      .bind(user.verein_id, 'pw_spieler', data.pw_spieler).run();
+  }
+  if (data.pw_trainer) {
+    await env.DB.prepare('INSERT INTO settings (verein_id,key,value) VALUES (?,?,?) ON CONFLICT(verein_id,key) DO UPDATE SET value=excluded.value')
+      .bind(user.verein_id, 'pw_trainer', data.pw_trainer).run();
+  }
   return json({ ok: true });
 }
 
@@ -431,7 +474,8 @@ async function importData(request, env, user) {
         await env.DB.prepare('INSERT INTO players (id,verein_id,name,vorname,geburtsdatum,jahrgang,mannschaft,gruppe,hand,trainer,vh_name,vh_typ,rh_name,rh_typ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
           .bind(p.id,vid,p.name,p.vorname,p.geburtsdatum||'',jahrgang,mannschaft,p.gruppe||'',p.hand||'',p.trainer||'',p.vhName||p.vh_name||'',p.vhTyp||p.vh_typ||'',p.rhName||p.rh_name||'',p.rhTyp||p.rh_typ||'').run();
         const uname = await genUsername(env, vid, p.vorname, p.name);
-        const hash = await hashPassword('TVB1912');
+        const pws = await getInitialPasswords(env, vid);
+        const hash = await hashPassword(pws.spieler);
         await env.DB.prepare('INSERT INTO users (id,verein_id,username,password_hash,role,display_name,player_id,must_change_password) VALUES (?,?,?,?,?,?,?,1)')
           .bind(uid(),vid,uname,hash,'spieler',`${p.vorname} ${p.name}`,p.id).run();
       }
