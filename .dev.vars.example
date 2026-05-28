@@ -1,0 +1,5 @@
+# Kopiere diese Datei als .dev.vars und passe die Werte an.
+# .dev.vars wird NICHT nach GitHub gepusht (steht in .gitignore).
+
+JWT_SECRET=lokales-test-secret-mindestens-32-zeichen-lang
+INITIAL_VEREIN=TV Brühl 1912
