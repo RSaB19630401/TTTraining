@@ -1,0 +1,12 @@
+{
+  "name": "tt-training",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "db:create": "wrangler d1 create tt-training-db",
+    "db:init": "wrangler d1 execute tt-training-db --file=schema.sql --remote",
+    "db:init:local": "wrangler d1 execute tt-training-db --file=schema.sql --local"
+  }
+}

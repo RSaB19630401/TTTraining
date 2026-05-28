@@ -1,0 +1,21 @@
+name = "tt-training"
+main = "src/index.js"
+compatibility_date = "2025-01-01"
+
+# Static frontend served from ./public
+[assets]
+directory = "./public"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "tt-training-db"
+database_id = "REPLACE_AFTER_DB_CREATION"
+
+# Environment variables (nicht-geheime Werte)
+[vars]
+INITIAL_VEREIN = "TV Brühl 1912"
+
+# WICHTIG: JWT_SECRET wird separat als Secret gesetzt:
+# wrangler secret put JWT_SECRET
+# Für lokale Entwicklung: .dev.vars anlegen (siehe .dev.vars.example)
