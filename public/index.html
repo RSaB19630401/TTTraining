@@ -46,8 +46,8 @@ nav button.active{color:var(--orange);border-bottom-color:var(--orange)}nav butt
 .player-item .actions,.trainer-item .actions{display:flex;gap:4px}.hidden{display:none!important}
 .rating-section h3{font-size:.95rem;color:var(--navy);margin:16px 0 8px;padding:6px 10px;background:var(--bg);border-radius:var(--radius);border-left:3px solid var(--orange)}
 .rating-row-wrap{padding:6px 0;border-bottom:1px solid #eee}.rating-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center}
-.rating-row .skill-name{font-size:.9rem;font-weight:500}.rating-buttons{display:flex;gap:4px}
-.rating-btn{width:32px;height:32px;border:2px solid var(--border);border-radius:50%;background:#fff;font-size:.8rem;font-weight:700;cursor:pointer;transition:all .15s;color:var(--text-muted)}
+.rating-row .skill-name{font-size:.9rem;font-weight:500}.rating-buttons{display:flex;gap:2px}
+.rating-btn{width:28px;height:28px;border:2px solid var(--border);border-radius:50%;background:#fff;font-size:.7rem;font-weight:700;cursor:pointer;transition:all .15s;color:var(--text-muted)}
 .rating-btn:hover{border-color:var(--orange);color:var(--orange)}.rating-btn.active{background:var(--orange);border-color:var(--orange);color:#fff}
 .rating-comment{width:100%;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:.8rem;margin-top:4px;font-family:inherit}
 .assessment-item{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border-radius:var(--radius);margin-bottom:6px;border:2px solid transparent;cursor:pointer;transition:all .2s}
@@ -220,7 +220,7 @@ canvas{max-width:100%}.chart-legend{display:flex;flex-wrap:wrap;gap:12px;justify
           <div class="form-group"><label>Datum *</label><input type="date" id="a-date"></div>
           <div class="form-group"><label>Bewerter</label><input type="text" id="a-trainer"></div>
         </div>
-        <div class="scale-legend"><span><strong>Skala:</strong></span><span>1=sehr schwach</span><span>2=schwach</span><span>3=ausbaufähig</span><span>4=solide</span><span>5=gut</span><span>6=sehr gut</span></div>
+        <div class="scale-legend"><span><strong>Skala:</strong></span><span>1=sehr schwach</span><span>2=schwach</span><span>3=deutlich ausbaufähig</span><span>4=ausbaufähig</span><span>5=befriedigend</span><span>6=solide</span><span>7=gut</span><span>8=sehr gut</span><span>9=hervorragend</span><span>10=exzellent</span></div>
         <div class="rating-section" id="ratings-container"></div>
         <div class="form-row" style="margin-top:16px">
           <div class="form-group"><label>Stärken</label><textarea id="a-staerken"></textarea></div>
@@ -585,7 +585,7 @@ async function saveSettingsForm(){
 function buildRatingsForm(){
   const c=document.getElementById('ratings-container');if(!c)return;let html='',cat='';
   SKILLS.forEach(s=>{if(s.cat!==cat){cat=s.cat;html+=`<h3>${esc(cat)}</h3>`;}
-    html+=`<div class="rating-row-wrap"><div class="rating-row"><span class="skill-name">${esc(s.name)}</span><div class="rating-buttons" data-skill="${s.id}">${[1,2,3,4,5,6].map(v=>`<button type="button" class="rating-btn" data-val="${v}" onclick="setRating('${s.id}',${v})">${v}</button>`).join('')}</div></div><input type="text" class="rating-comment" id="rc-${s.id}" placeholder="Bemerkung…"></div>`;
+    html+=`<div class="rating-row-wrap"><div class="rating-row"><span class="skill-name">${esc(s.name)}</span><div class="rating-buttons" data-skill="${s.id}">${[1,2,3,4,5,6,7,8,9,10].map(v=>`<button type="button" class="rating-btn" data-val="${v}" onclick="setRating('${s.id}',${v})">${v}</button>`).join('')}</div></div><input type="text" class="rating-comment" id="rc-${s.id}" placeholder="Bemerkung…"></div>`;
   });c.innerHTML=html;
 }
 function setRating(sid,val){document.querySelector(`.rating-buttons[data-skill="${sid}"]`).querySelectorAll('.rating-btn').forEach(b=>b.classList.toggle('active',parseInt(b.dataset.val)===val));}
@@ -712,7 +712,7 @@ function showMyAssessment(id){
   let html='',cat='';
   SKILLS.forEach(s=>{if(s.cat!==cat){cat=s.cat;html+=`<h3 style="font-size:.9rem;color:var(--navy);margin:12px 0 6px;border-left:3px solid var(--orange);padding-left:8px">${esc(cat)}</h3>`;}
     const v=a.ratings[s.id]?.value||0;const c=a.ratings[s.id]?.comment||'';
-    html+=`<div class="rating-display"><span class="rd-name">${esc(s.name)}${c?' <span style="color:var(--text-muted);font-size:.75rem">('+esc(c)+')</span>':''}</span><div class="rd-bar"><div class="rd-fill" style="width:${(v/6*100).toFixed(0)}%"></div></div><span class="rd-val">${v||'–'}</span></div>`;});
+    html+=`<div class="rating-display"><span class="rd-name">${esc(s.name)}${c?' <span style="color:var(--text-muted);font-size:.75rem">('+esc(c)+')</span>':''}</span><div class="rd-bar"><div class="rd-fill" style="width:${(v/10*100).toFixed(0)}%"></div></div><span class="rd-val">${v||'–'}</span></div>`;});
   document.getElementById('my-detail-ratings').innerHTML=html;
   let t='';if(a.staerken)t+=`<div class="data-field"><div class="label">Stärken</div><div class="value">${esc(a.staerken)}</div></div>`;
   if(a.nextStep||a.next_step)t+=`<div class="data-field"><div class="label">Nächster Schritt</div><div class="value">${esc(a.nextStep||a.next_step)}</div></div>`;
@@ -738,12 +738,12 @@ function drawRadar(cid,lid,selIds){
   canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+'px';canvas.style.height=h+'px';
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
   const cx=w/2,cy=h/2,R=Math.min(cx,cy)-60,n=SKILLS.length,step=(2*Math.PI)/n,start=-Math.PI/2;
-  for(let ring=1;ring<=6;ring++){const r=(R/6)*ring;ctx.beginPath();for(let i=0;i<=n;i++){const a=start+i*step;const x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.strokeStyle='#dde1e8';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#aab3c0';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(ring.toString(),cx+r*Math.cos(start),cy+r*Math.sin(start)-4);}
+  for(let ring=1;ring<=10;ring++){const r=(R/10)*ring;ctx.beginPath();for(let i=0;i<=n;i++){const a=start+i*step;const x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}ctx.strokeStyle=ring%5===0?'#ccd0d8':'#eaecf0';ctx.lineWidth=1;ctx.stroke();if(ring%2===0||ring===1){ctx.fillStyle='#aab3c0';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(ring.toString(),cx+r*Math.cos(start),cy+r*Math.sin(start)-4);}}
   for(let i=0;i<n;i++){const a=start+i*step;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+R*Math.cos(a),cy+R*Math.sin(a));ctx.strokeStyle='#dde1e8';ctx.lineWidth=1;ctx.stroke();const lR=R+22,lx=cx+lR*Math.cos(a),ly=cy+lR*Math.sin(a);ctx.save();ctx.fillStyle='#1a2744';ctx.font='11px sans-serif';ctx.textAlign=Math.cos(a)<-0.1?'right':Math.cos(a)>0.1?'left':'center';ctx.textBaseline=Math.sin(a)<-0.1?'bottom':Math.sin(a)>0.1?'top':'middle';let label=SKILLS[i].name;if(label.length>14)label=label.slice(0,12)+'…';ctx.fillText(label,lx,ly);ctx.restore();}
   const as=selIds.map(id=>assessments.find(a=>a.id===id)).filter(Boolean);
   const legend=document.getElementById(lid);legend.innerHTML='';
-  as.forEach((a,idx)=>{const color=COLORS[idx%COLORS.length],colorL=COLORS_L[idx%COLORS_L.length];ctx.beginPath();SKILLS.forEach((s,i)=>{const val=a.ratings[s.id]?.value||0;const r=(R/6)*val;const ang=start+i*step;i===0?ctx.moveTo(cx+r*Math.cos(ang),cy+r*Math.sin(ang)):ctx.lineTo(cx+r*Math.cos(ang),cy+r*Math.sin(ang));});ctx.closePath();ctx.fillStyle=colorL;ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
-    SKILLS.forEach((s,i)=>{const val=a.ratings[s.id]?.value||0;const r=(R/6)*val;const ang=start+i*step;ctx.beginPath();ctx.arc(cx+r*Math.cos(ang),cy+r*Math.sin(ang),3,0,2*Math.PI);ctx.fillStyle=color;ctx.fill();});
+  as.forEach((a,idx)=>{const color=COLORS[idx%COLORS.length],colorL=COLORS_L[idx%COLORS_L.length];ctx.beginPath();SKILLS.forEach((s,i)=>{const val=a.ratings[s.id]?.value||0;const r=(R/10)*val;const ang=start+i*step;i===0?ctx.moveTo(cx+r*Math.cos(ang),cy+r*Math.sin(ang)):ctx.lineTo(cx+r*Math.cos(ang),cy+r*Math.sin(ang));});ctx.closePath();ctx.fillStyle=colorL;ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
+    SKILLS.forEach((s,i)=>{const val=a.ratings[s.id]?.value||0;const r=(R/10)*val;const ang=start+i*step;ctx.beginPath();ctx.arc(cx+r*Math.cos(ang),cy+r*Math.sin(ang),3,0,2*Math.PI);ctx.fillStyle=color;ctx.fill();});
     legend.innerHTML+=`<span><span class="dot" style="background:${color}"></span>${formatDate(a.date)}</span>`;});
 }
 
@@ -763,14 +763,14 @@ function drawLine(canvas,as,skills){
   const ctx=canvas.getContext('2d');const dpr=window.devicePixelRatio||1;const w=canvas.parentElement.clientWidth-20,h=250;
   canvas.width=w*dpr;canvas.height=h*dpr;canvas.style.width=w+'px';canvas.style.height=h+'px';ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
   const pad={top:20,right:20,bottom:40,left:35},cw=w-pad.left-pad.right,ch=h-pad.top-pad.bottom;
-  for(let v=1;v<=6;v++){const y=pad.top+ch-((v-1)/5)*ch;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(w-pad.right,y);ctx.strokeStyle='#eee';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#aab3c0';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(v.toString(),pad.left-6,y+3);}
+  for(let v=1;v<=10;v++){const y=pad.top+ch-((v-1)/9)*ch;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(w-pad.right,y);ctx.strokeStyle=v%5===0?'#ccc':'#eee';ctx.lineWidth=1;ctx.stroke();ctx.fillStyle='#aab3c0';ctx.font='10px sans-serif';ctx.textAlign='right';ctx.fillText(v.toString(),pad.left-6,y+3);}
   const n=as.length;as.forEach((a,i)=>{const x=pad.left+(i/Math.max(n-1,1))*cw;ctx.fillStyle='#6b7a90';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.save();ctx.translate(x,h-6);ctx.rotate(-0.4);ctx.fillText(formatDate(a.date),0,0);ctx.restore();});
   const lc=['#f28c28','#1a2744','#2ecc71','#e74c3c','#9b59b6','#3498db','#1abc9c','#e67e22'];
   const ld=document.createElement('div');ld.style.cssText='display:flex;flex-wrap:wrap;gap:8px;font-size:.75rem;margin-top:4px;';
   skills.forEach((s,si)=>{const color=lc[si%lc.length];ctx.beginPath();
-    as.forEach((a,i)=>{const val=a.ratings[s.id]?.value||0;if(!val)return;const x=pad.left+(i/Math.max(n-1,1))*cw,y=pad.top+ch-((val-1)/5)*ch;if(i===0||(as[i-1]&&!(as[i-1].ratings[s.id]?.value)))ctx.moveTo(x,y);else ctx.lineTo(x,y);});
+    as.forEach((a,i)=>{const val=a.ratings[s.id]?.value||0;if(!val)return;const x=pad.left+(i/Math.max(n-1,1))*cw,y=pad.top+ch-((val-1)/9)*ch;if(i===0||(as[i-1]&&!(as[i-1].ratings[s.id]?.value)))ctx.moveTo(x,y);else ctx.lineTo(x,y);});
     ctx.strokeStyle=color;ctx.lineWidth=2;ctx.stroke();
-    as.forEach((a,i)=>{const val=a.ratings[s.id]?.value||0;if(!val)return;const x=pad.left+(i/Math.max(n-1,1))*cw,y=pad.top+ch-((val-1)/5)*ch;ctx.beginPath();ctx.arc(x,y,3,0,2*Math.PI);ctx.fillStyle=color;ctx.fill();});
+    as.forEach((a,i)=>{const val=a.ratings[s.id]?.value||0;if(!val)return;const x=pad.left+(i/Math.max(n-1,1))*cw,y=pad.top+ch-((val-1)/9)*ch;ctx.beginPath();ctx.arc(x,y,3,0,2*Math.PI);ctx.fillStyle=color;ctx.fill();});
     ld.innerHTML+=`<span style="display:flex;align-items:center;gap:3px"><span style="width:10px;height:3px;background:${color};border-radius:2px;display:inline-block"></span>${esc(s.name)}</span>`;});
   canvas.parentElement.appendChild(ld);
 }
