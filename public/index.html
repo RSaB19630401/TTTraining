@@ -252,6 +252,41 @@ canvas{max-width:100%}.chart-legend{display:flex;flex-wrap:wrap;gap:12px;justify
     </div>
   </div>
 
+  <!-- LEHRVIDEOS -->
+  <div id="tab-videos" class="tab-content">
+    <div class="card" id="video-form-card">
+      <h2>🎬 Lehrvideo hinzufügen</h2>
+      <input type="hidden" id="v-id">
+      <div class="form-row">
+        <div class="form-group"><label>Titel *</label><input type="text" id="v-title" placeholder="z.B. Vorhand-Topspin Grundtechnik"></div>
+        <div class="form-group"><label>Kategorie</label><select id="v-category"><option value="Technik">Technik</option><option value="Athletik">Athletik</option><option value="Taktik">Taktik</option><option value="Allgemein" selected>Allgemein</option></select></div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px"><label>Beschreibung</label><textarea id="v-desc" placeholder="Kurze Beschreibung des Videos…"></textarea></div>
+      <div class="form-group" style="margin-bottom:12px"><label>Video-URL *</label><input type="url" id="v-url" placeholder="https://www.youtube.com/watch?v=..."></div>
+      <div class="form-group" style="margin-bottom:12px">
+        <label>Zugeordnete Fähigkeiten (optional)</label>
+        <div class="check-list" id="v-skills"></div>
+      </div>
+      <div class="btn-bar">
+        <button class="btn btn-primary" onclick="saveVideoForm()">Video speichern</button>
+        <button class="btn btn-outline" onclick="resetVideoForm()">Abbrechen</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>📋 Videoliste</h2>
+      <div style="margin-bottom:12px">
+        <select id="v-filter" onchange="renderVideoList()" style="padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius);font-size:.9rem">
+          <option value="">Alle Kategorien</option>
+          <option value="Technik">Technik</option>
+          <option value="Athletik">Athletik</option>
+          <option value="Taktik">Taktik</option>
+          <option value="Allgemein">Allgemein</option>
+        </select>
+      </div>
+      <div id="video-list"></div>
+    </div>
+  </div>
+
   <!-- MEINE DATEN -->
   <div id="tab-mydata" class="tab-content">
     <div class="card"><h2>👤 Meine Stammdaten</h2><div class="data-grid" id="my-stamm"></div></div>
@@ -386,7 +421,7 @@ async function startApp(){
 // ============================================================
 // NAV
 // ============================================================
-const TABS={players:{label:'Spieler',roles:['admin','trainer']},admin:{label:'Verwaltung',roles:['admin']},assessments:{label:'Beurteilungen',roles:['admin','trainer']},analysis:{label:'Auswertung',roles:['admin','trainer']},mydata:{label:'Meine Daten',roles:['spieler']},io:{label:'Import/Export',roles:['admin','trainer']}};
+const TABS={players:{label:'Spieler',roles:['admin','trainer']},admin:{label:'Verwaltung',roles:['admin']},assessments:{label:'Beurteilungen',roles:['admin','trainer']},analysis:{label:'Auswertung',roles:['admin','trainer']},videos:{label:'Lehrvideos',roles:['admin','trainer','spieler']},mydata:{label:'Meine Daten',roles:['spieler']},io:{label:'Import/Export',roles:['admin','trainer']}};
 
 function buildNav(){
   const nav=document.getElementById('main-nav');nav.innerHTML='';
@@ -405,6 +440,7 @@ async function switchTab(tab){
   if(tab==='players'){await loadPlayers();await loadLists();populateStammdatenSelects();renderPlayers();}
   if(tab==='assessments'||tab==='analysis'){await loadPlayers();populatePlayerDropdowns();}
   if(tab==='admin'){await loadTrainers();await loadUsers();await loadLists();renderTrainers();populateResetDropdown();renderAllLists();loadSettingsForm();}
+  if(tab==='videos')await loadAndRenderVideos();
   if(tab==='mydata')await renderMyData();
 }
 
@@ -579,6 +615,98 @@ async function saveSettingsForm(){
   if(pw_spieler.length<4||pw_trainer.length<4){toast('Mindestens 4 Zeichen pro Passwort!');return;}
   await api('settings',{method:'POST',body:JSON.stringify({pw_spieler,pw_trainer})});
   toast('Initialpasswörter gespeichert!');
+}
+
+// ============================================================
+// VIDEOS
+// ============================================================
+let videosList=[];
+
+async function loadAndRenderVideos(){
+  try{videosList=await api('videos');}catch(e){videosList=[];}
+  renderVideoList();
+  buildVideoSkillChecks();
+  const formCard=document.getElementById('video-form-card');
+  if(formCard) formCard.classList.toggle('hidden',currentUser.role==='spieler');
+}
+
+function buildVideoSkillChecks(){
+  const c=document.getElementById('v-skills');if(!c)return;
+  c.innerHTML=SKILLS.map(s=>`<span class="check-item" data-sid="${s.id}" onclick="this.classList.toggle('active')">${esc(s.name)}</span>`).join('');
+}
+
+function renderVideoList(){
+  const list=document.getElementById('video-list');
+  const filter=document.getElementById('v-filter')?.value||'';
+  let items=filter?videosList.filter(v=>v.category===filter):videosList;
+  if(!items.length){list.innerHTML='<div class="empty-state"><div class="icon">🎬</div><p>Keine Lehrvideos vorhanden.</p></div>';return;}
+  const isEditor=currentUser.role==='admin'||currentUser.role==='trainer';
+  list.innerHTML=items.map(v=>{
+    const skillNames=(v.skill_ids||[]).map(sid=>{const s=SKILLS.find(x=>x.id===sid);return s?s.name:null;}).filter(Boolean);
+    const skillTags=skillNames.length?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">${skillNames.map(n=>`<span style="background:var(--bg);padding:2px 8px;border-radius:10px;font-size:.7rem;color:var(--text-muted)">${esc(n)}</span>`).join('')}</div>`:'';
+    return`<div class="player-item" style="flex-direction:column;align-items:stretch;cursor:default">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="name">${esc(v.title)}</span>
+            <span style="background:var(--orange);color:#fff;padding:1px 8px;border-radius:10px;font-size:.65rem;font-weight:700">${esc(v.category)}</span>
+          </div>
+          ${v.description?`<div style="font-size:.85rem;color:var(--text-muted);margin-top:4px">${esc(v.description)}</div>`:''}
+          ${skillTags}
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <a href="${esc(v.url)}" target="_blank" rel="noopener" class="btn btn-sm btn-primary" style="text-decoration:none">▶ Ansehen</a>
+          ${isEditor?`<button class="btn btn-sm btn-outline" onclick="editVideo('${v.id}')">✏️</button><button class="btn btn-sm btn-danger" onclick="deleteVideoItem('${v.id}')">🗑️</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function saveVideoForm(){
+  const id=document.getElementById('v-id').value;
+  const data={
+    title:document.getElementById('v-title').value.trim(),
+    url:document.getElementById('v-url').value.trim(),
+    description:document.getElementById('v-desc').value.trim(),
+    category:document.getElementById('v-category').value,
+    skill_ids:Array.from(document.querySelectorAll('#v-skills .check-item.active')).map(el=>el.dataset.sid),
+  };
+  if(!data.title||!data.url){toast('Titel und URL sind Pflicht!');return;}
+  try{
+    if(id)await api('videos/'+id,{method:'PUT',body:JSON.stringify(data)});
+    else await api('videos',{method:'POST',body:JSON.stringify(data)});
+    resetVideoForm();await loadAndRenderVideos();
+    toast(id?'Video aktualisiert!':'Video hinzugefügt!');
+  }catch(e){}
+}
+
+function editVideo(id){
+  const v=videosList.find(x=>x.id===id);if(!v)return;
+  document.getElementById('v-id').value=v.id;
+  document.getElementById('v-title').value=v.title;
+  document.getElementById('v-url').value=v.url;
+  document.getElementById('v-desc').value=v.description||'';
+  document.getElementById('v-category').value=v.category||'Allgemein';
+  document.querySelectorAll('#v-skills .check-item').forEach(el=>{
+    el.classList.toggle('active',(v.skill_ids||[]).includes(el.dataset.sid));
+  });
+  document.getElementById('video-form-card').scrollIntoView({behavior:'smooth'});
+}
+
+async function deleteVideoItem(id){
+  if(!confirm('Video löschen?'))return;
+  await api('videos/'+id,{method:'DELETE'});
+  await loadAndRenderVideos();toast('Video gelöscht.');
+}
+
+function resetVideoForm(){
+  document.getElementById('v-id').value='';
+  document.getElementById('v-title').value='';
+  document.getElementById('v-url').value='';
+  document.getElementById('v-desc').value='';
+  document.getElementById('v-category').value='Allgemein';
+  document.querySelectorAll('#v-skills .check-item').forEach(el=>el.classList.remove('active'));
 }
 
 // ============================================================
