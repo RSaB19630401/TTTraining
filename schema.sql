@@ -87,3 +87,19 @@ CREATE TABLE IF NOT EXISTS settings (
   PRIMARY KEY (verein_id, key),
   FOREIGN KEY (verein_id) REFERENCES vereine(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS videos (
+  id TEXT PRIMARY KEY,
+  verein_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  url TEXT NOT NULL,
+  skill_ids TEXT DEFAULT '[]',
+  category TEXT DEFAULT 'Allgemein',
+  sort_order INTEGER DEFAULT 0,
+  created_by TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (verein_id) REFERENCES vereine(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_videos_verein ON videos(verein_id);
